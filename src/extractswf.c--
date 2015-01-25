@@ -1,0 +1,131 @@
+#pragma option w32c
+#pragma option X
+#include <windows.h>
+#include "msvcrt.h"
+
+#define	SIG_V4		6010Bh
+#define	SEEK_V4		46000h
+
+#define	SIG_V5_30D	399C98BDh
+#define	SEEK_V5_30D8	58000h
+#define	SEEK_V5_30DC	5C000h
+
+#define	SIG_V5_30C	399C998Ch
+#define	SEEK_V5_30C9	59000h
+#define	SEEK_V5_30CF	5F000h
+#define	SEEK_V5_30C6	69000h
+
+#define	SIG_V6_4	3C74E454h
+#define	SEEK_V6_4	0C6000h
+
+#define	SIG_V6_21	3C85AAA3h
+#define	SEEK_V6_21B7	0B7000h
+#define	SEEK_V6_21BC	0BC000h
+#define	SEEK_V6_21C8	0C8000h
+
+#define	SIG_V7_14	3F57AD38h
+#define	SEEK_V7_14	0F1000h
+
+#define	SIG_V7_19	3FD4F616h
+#define	SEEK_V7_19	0F5000h
+
+#define	SIG_V8_22	4310D1EEh
+#define	SEEK_V8_22	182000h
+
+//кол-во МБайт читаем - буфер
+#define	MAXBYTEREAD	18*1048576
+
+dword	fHANDL, nHANDL, sHANDL, SetSeek, pSeek, CNT_Byte;
+byte sName[MAX_PATH],  swfName[MAX_PATH];
+
+WIN32_FIND_DATA flSearch;
+byte Buff[MAXBYTEREAD];
+
+void main()
+{
+	printf("EXE--> SWF Extractor 1v3.7\nHistory: 04.10.06 30.05.07 13.01.08 04.05.08 14.09.08 15.09.08\n\t\t(c) Simron\n\n");
+	EDI= -1;
+	if( sHANDL= FindFirstFile("*.exe", #flSearch) != EDI)
+	{
+		FOR(;;)
+		{
+			IF (flSearch.nFileSizeLow< 244000)	goto NextFile;
+			CharToOem(#flSearch.cFileName, #sName);
+			if( fHANDL= _lopen(#flSearch.cFileName, OF_READ) != EDI)
+			{
+				_lread(fHANDL, #Buff, MAXBYTEREAD);
+				SetSeek= 0;
+				EBX= #Buff+8+ DSDWORD[#Buff+ 3Ch];
+				switch(DSDWORD[EBX])
+				{
+					CASE SIG_V4:		SetSeek= SEEK_V4; break;
+					CASE SIG_V5_30D:
+							EAX= DSDWORD[#Buff+ SEEK_V5_30D8];
+							EAX&= 0FFFFFFh;
+							IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V5_30D8;
+							ELSE SetSeek= SEEK_V5_30DC;
+							break;
+					CASE SIG_V5_30C:
+							EAX= DSDWORD[#Buff+ SEEK_V5_30C9];
+							EAX&= 0FFFFFFh;
+							IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V5_30C9;
+							ELSE
+							{
+								EAX= DSDWORD[#Buff+ SEEK_V5_30CF];
+								EAX&= 0FFFFFFh;
+								IF( (EAX== 'SWC')||(EAX== 'SWF') ) SetSeek= SEEK_V5_30CF;
+								ELSE SetSeek= SEEK_V5_30C6;
+							}
+							break;
+					case SIG_V6_4:		SetSeek= SEEK_V6_4; BREAK;
+					case SIG_V6_21:
+							EAX= DSDWORD[#Buff+ SEEK_V6_21B7];
+							EAX&= 0FFFFFFh;
+							IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V6_21B7;
+							ELSE
+							{
+								EAX= DSDWORD[#Buff+ SEEK_V6_21BC];
+								EAX&= 0FFFFFFh;
+								IF( (EAX== 'SWC')||(EAX== 'SWF') ) SetSeek= SEEK_V6_21BC;
+								ELSE SetSeek= SEEK_V6_21C8;
+							}
+							BREAK;
+					case SIG_V7_14:		SetSeek= SEEK_V7_14; BREAK;
+					case SIG_V7_19:		SetSeek= SEEK_V7_19; BREAK;
+					case SIG_V8_22:		SetSeek= SEEK_V8_22; BREAK;
+				}
+				if(SetSeek)
+				{
+					pSeek= #Buff+ SetSeek;
+					EAX= DSDWORD[pSeek];
+					EAX&= 0FFFFFFh;
+					if( (EAX== 'SWC')||(EAX== 'SWF') )
+					{
+						EBX= #flSearch.cFileName-4+ strlen(#sName);
+						DSDWORD[EBX]= 'fws.';
+						CharToOem(#flSearch.cFileName, #swfName);
+						printf("Create..\t\"%s\"\n", #swfName);
+						IF( nHANDL= _lcreat(#flSearch.cFileName, 1)!= EDI)
+						{
+							CNT_Byte= flSearch.nFileSizeLow- SetSeek;
+							SetSeek= _lwrite(nHANDL, pSeek, CNT_Byte);
+							IF(SetSeek!= CNT_Byte) printf("Error Write in \"%s\"", #swfName);
+							ELSE printf("Write in\t\"%s\"\t\t%dB\n", #swfName, SetSeek);
+							_lclose(nHANDL);
+						}
+						ELSE printf("No Create \"%s\"\n", #swfName);
+						DSDWORD[pSeek]= 0;
+					}
+					ELSE printf("Error Offset in \"%s\"\n", #sName);
+				}
+				ELSE printf("Error SIGN in \"%s\"\n", #sName);
+				_lclose(fHANDL);
+			}
+		NextFile:
+			IF (!FindNextFile(sHANDL, #flSearch)) BREAK;
+		}
+		FindClose(sHANDL);
+	}
+	printf("Finish");
+	_getch();
+}
