@@ -1,4 +1,6 @@
 #pragma option w32c
+#pragma option P
+#pragma option J1
 #pragma option X
 #include <windows.h>
 #include "msvcrt.h"
@@ -36,14 +38,15 @@
 #define	MAXBYTEREAD	18*1048576
 
 dword	fHANDL, nHANDL, sHANDL, SetSeek, pSeek, CNT_Byte;
-byte sName[MAX_PATH],  swfName[MAX_PATH];
+byte quiet=0, sName[MAX_PATH],  swfName[MAX_PATH];
 
 WIN32_FIND_DATA flSearch;
 byte Buff[MAXBYTEREAD];
 
 void main()
 {
-	printf("EXE--> SWF Extractor 1v3.7\nHistory: 04.10.06 30.05.07 13.01.08 04.05.08 14.09.08 15.09.08\n\t\t(c) Simron\n\n");
+	printf("EXE--> SWF Extractor 1v3.8\nHistory: 04.10.06 30.05.07 13.01.08 04.05.08 14.09.08 16.09.08\n\t\t(c) Simron\n\n");
+	IF( !strcmp("-q",@PARAMSTR(1)) ) quiet= 1;
 	EDI= -1;
 	if( sHANDL= FindFirstFile("*.exe", #flSearch) != EDI)
 	{
@@ -126,6 +129,6 @@ void main()
 		}
 		FindClose(sHANDL);
 	}
-	printf("Finish");
-	_getch();
+	printf("Finish\n\n");
+	IF (!quiet)	_getch();
 }
