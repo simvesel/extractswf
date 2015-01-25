@@ -46,45 +46,41 @@ char *pPrm;
 
 struct sett_extract {
 	char quiet;
-	char *filename;
+	char manual;
 };
 
 sett_extract sett;
 
-byte sName[MAX_PATH+14],  swfName[MAX_PATH];
+byte sName[MAX_PATH+4],  swfName[MAX_PATH+4];
 WIN32_FILE_ATTRIBUTE_DATA FlInf;
 WIN32_FIND_DATA Find;
 byte Buff[MAXBYTEREAD];
 
 int main()
 {
-	printf("EXE--> SWF Extractor 1v4.0\nHistory: 04.10.06 30.05.07 13.01.08 04.05.08 14.09.08 16.09.08 20.09.08\n29.10.08\n\t\t(c) Simron\n\n");
+	printf("EXE--> SWF Extractor 1v4.0\nHistory: 04.10.06 30.05.07 13.01.08 04.05.08 14.09.08 16.09.08 20.09.08\n29.10.08 03.11.08\n\t\t(c) Simron\n\n");
 	sett.quiet= 0;
-	sett.filename= 0;
+	sett.manual= 0;
 	ErrLev= 0;
 
- 	for(k= 0; k++< __numparam;){
+ 	FOR(k= 0; k++< __numparam;){
 		pPrm= @PARAMSTR(k);
  		IF(!strcmp(pPrm, "-q")) { sett.quiet= 1; CONTINUE; }
-		IF(strstr(pPrm, "-f")== pPrm){
-			IF(DSBYTE[pPrm+2]) { sett.filename= pPrm+2; CONTINUE; }
-			ELSE { printf("-f: set file name\n"); ErrLev= ErrName; CONTINUE; };
-		}
+		IF(!strcmp(pPrm, "-m")) { sett.manual= 1; CONTINUE; }
 		printf("Unknown cmd \"%s\"\n", pPrm);
 		ErrLev= ErrParam;
-
  	}
- 	IF(DEBUG) printf("quiet: %d\nfile: \"%s\"\n", sett.quiet, sett.filename);
+ 	IF(DEBUG) printf("quiet: %d\nmanual: %d\n", sett.quiet, sett.manual);
  	IF(ErrLev) GOTO localExit;
 
 	EDI= -1;
-	IF(sett.filename) {
-		IF( !(sHANDL= fopen(sett.filename, "r")) ) {
-			printf("Error open \"%s\"\n", sett.filename);
+	IF(sett.manual) {
+		sHANDL= __iob_func();
+		IF(!sHANDL) {
+			printf("Error open \"%s\"\n", "stdin");
 			ErrLev= ErrOpen;
 			GOTO localExit;
 		}
-
 	}
 	ELSE {
 		IF( sHANDL= FindFirstFile("*.exe", #Find)== EDI )
@@ -95,10 +91,11 @@ localExit:
 
 	FOR(;;)
 	{
-		if(sett.filename) {
+		if(sett.manual) {
 		NewRecord:
-			IF( !fgets(#sName, MAX_PATH, sHANDL) )	break;
-			IF(DEBUG) printf("\nfgets:\t\"%s\"\n", #sName);
+			IF( !fgets(#sName, MAX_PATH+2, sHANDL) )	break;
+			DSBYTE[#sName-1+ strlen(#sName)]= 0;
+			IF(DEBUG) printf("\ngets:\t\"%s\"\n", #sName);
 			OemToChar(#sName, #Find.cFileName);
 			IF(!GetFileAttributesEx(#Find.cFileName, GetFileExInfoStandard, #FlInf)) {
 				printf("Erorr info \"%s\"\n", #sName);
@@ -109,7 +106,7 @@ localExit:
 			printf("\nAfter GetFileAttr..:\t\"%s\"\n\n", #sName);
 		}
 		IF(Find.nFileSizeLow< 244000)	goto NextFile;
-		IF(!sett.filename) CharToOem(#Find.cFileName, #sName);
+		IF(!sett.manual) CharToOem(#Find.cFileName, #sName);
 
 		if( fHANDL= _lopen(#Find.cFileName, OF_READ) != EDI)
 		{
@@ -183,10 +180,9 @@ localExit:
 		}
 		ELSE { ErrLev= ErrOpen; printf("Error open \"%s\"\n", #Find.cFileName); }
 	NextFile:
-		IF( (!sett.filename)&&(!FindNextFile(sHANDL, #Find)) ) BREAK;
+		IF( (!sett.manual)&&(!FindNextFile(sHANDL, #Find)) ) BREAK;
 	}
-	IF(sett.filename) fclose(sHANDL);
-	ELSE FindClose(sHANDL);
+	IF(!sett.manual) FindClose(sHANDL);
 
 	printf("Finish\n\n");
 ExitMain:
