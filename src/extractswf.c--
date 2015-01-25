@@ -37,98 +37,159 @@
 //кол-во МБайт читаем - буфер
 #define	MAXBYTEREAD	18*1048576
 
-dword	fHANDL, nHANDL, sHANDL, SetSeek, pSeek, CNT_Byte;
-byte quiet=0, sName[MAX_PATH],  swfName[MAX_PATH];
+#define DEBUG 1
 
-WIN32_FIND_DATA flSearch;
+enum { ErrName= 1, ErrParam, ErrOpen, ErrInfo, ErrOffset, ErrSeek, ErrSig, ErrCreate };
+
+dword	fHANDL, nHANDL, sHANDL, SetSeek, pSeek, CNT_Byte, ErrLev, k;
+char *pPrm;
+
+struct sett_extract {
+	char quiet;
+	char *filename;
+};
+
+sett_extract sett;
+
+byte sName[MAX_PATH+14],  swfName[MAX_PATH];
+WIN32_FILE_ATTRIBUTE_DATA FlInf;
+WIN32_FIND_DATA Find;
 byte Buff[MAXBYTEREAD];
 
-void main()
+int main()
 {
-	printf("EXE--> SWF Extractor 1v3.8\nHistory: 04.10.06 30.05.07 13.01.08 04.05.08 14.09.08 16.09.08\n\t\t(c) Simron\n\n");
-	IF( !strcmp("-q",@PARAMSTR(1)) ) quiet= 1;
-	EDI= -1;
-	if( sHANDL= FindFirstFile("*.exe", #flSearch) != EDI)
-	{
-		FOR(;;)
-		{
-			IF (flSearch.nFileSizeLow< 244000)	goto NextFile;
-			CharToOem(#flSearch.cFileName, #sName);
-			if( fHANDL= _lopen(#flSearch.cFileName, OF_READ) != EDI)
-			{
-				_lread(fHANDL, #Buff, MAXBYTEREAD);
-				SetSeek= 0;
-				EBX= #Buff+8+ DSDWORD[#Buff+ 3Ch];
-				switch(DSDWORD[EBX])
-				{
-					CASE SIG_V4:		SetSeek= SEEK_V4; break;
-					CASE SIG_V5_30D:
-							EAX= DSDWORD[#Buff+ SEEK_V5_30D8];
-							EAX&= 0FFFFFFh;
-							IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V5_30D8;
-							ELSE SetSeek= SEEK_V5_30DC;
-							break;
-					CASE SIG_V5_30C:
-							EAX= DSDWORD[#Buff+ SEEK_V5_30C9];
-							EAX&= 0FFFFFFh;
-							IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V5_30C9;
-							ELSE
-							{
-								EAX= DSDWORD[#Buff+ SEEK_V5_30CF];
-								EAX&= 0FFFFFFh;
-								IF( (EAX== 'SWC')||(EAX== 'SWF') ) SetSeek= SEEK_V5_30CF;
-								ELSE SetSeek= SEEK_V5_30C6;
-							}
-							break;
-					case SIG_V6_4:		SetSeek= SEEK_V6_4; BREAK;
-					case SIG_V6_21:
-							EAX= DSDWORD[#Buff+ SEEK_V6_21B7];
-							EAX&= 0FFFFFFh;
-							IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V6_21B7;
-							ELSE
-							{
-								EAX= DSDWORD[#Buff+ SEEK_V6_21BC];
-								EAX&= 0FFFFFFh;
-								IF( (EAX== 'SWC')||(EAX== 'SWF') ) SetSeek= SEEK_V6_21BC;
-								ELSE SetSeek= SEEK_V6_21C8;
-							}
-							BREAK;
-					case SIG_V7_14:		SetSeek= SEEK_V7_14; BREAK;
-					case SIG_V7_19:		SetSeek= SEEK_V7_19; BREAK;
-					case SIG_V8_22:		SetSeek= SEEK_V8_22; BREAK;
-				}
-				if(SetSeek)
-				{
-					pSeek= #Buff+ SetSeek;
-					EAX= DSDWORD[pSeek];
-					EAX&= 0FFFFFFh;
-					if( (EAX== 'SWC')||(EAX== 'SWF') )
-					{
-						EBX= #flSearch.cFileName-4+ strlen(#sName);
-						DSDWORD[EBX]= 'fws.';
-						CharToOem(#flSearch.cFileName, #swfName);
-						printf("Create..\t\"%s\"\n", #swfName);
-						IF( nHANDL= _lcreat(#flSearch.cFileName, 1)!= EDI)
-						{
-							CNT_Byte= flSearch.nFileSizeLow- SetSeek;
-							SetSeek= _lwrite(nHANDL, pSeek, CNT_Byte);
-							IF(SetSeek!= CNT_Byte) printf("Error Write in \"%s\"", #swfName);
-							ELSE printf("Write in\t\"%s\"\t\t%dB\n", #swfName, SetSeek);
-							_lclose(nHANDL);
-						}
-						ELSE printf("No Create \"%s\"\n", #swfName);
-						DSDWORD[pSeek]= 0;
-					}
-					ELSE printf("Error Offset in \"%s\"\n", #sName);
-				}
-				ELSE printf("Error SIGN in \"%s\"\n", #sName);
-				_lclose(fHANDL);
-			}
-		NextFile:
-			IF (!FindNextFile(sHANDL, #flSearch)) BREAK;
+	printf("EXE--> SWF Extractor 1v4.0\nHistory: 04.10.06 30.05.07 13.01.08 04.05.08 14.09.08 16.09.08 20.09.08\n29.10.08\n\t\t(c) Simron\n\n");
+	sett.quiet= 0;
+	sett.filename= 0;
+	ErrLev= 0;
+
+ 	for(k= 0; k++< __numparam;){
+		pPrm= @PARAMSTR(k);
+ 		IF(!strcmp(pPrm, "-q")) { sett.quiet= 1; CONTINUE; }
+		IF(strstr(pPrm, "-f")== pPrm){
+			IF(DSBYTE[pPrm+2]) { sett.filename= pPrm+2; CONTINUE; }
+			ELSE { printf("-f: set file name\n"); ErrLev= ErrName; CONTINUE; };
 		}
-		FindClose(sHANDL);
+		printf("Unknown cmd \"%s\"\n", pPrm);
+		ErrLev= ErrParam;
+
+ 	}
+ 	IF(DEBUG) printf("quiet: %d\nfile: \"%s\"\n", sett.quiet, sett.filename);
+ 	IF(ErrLev) GOTO localExit;
+
+	EDI= -1;
+	IF(sett.filename) {
+		IF( !(sHANDL= fopen(sett.filename, "r")) ) {
+			printf("Error open \"%s\"\n", sett.filename);
+			ErrLev= ErrOpen;
+			GOTO localExit;
+		}
+
 	}
+	ELSE {
+		IF( sHANDL= FindFirstFile("*.exe", #Find)== EDI )
+		printf("No files found\n");
+localExit:
+		goto ExitMain;
+	}
+
+	FOR(;;)
+	{
+		if(sett.filename) {
+		NewRecord:
+			IF( !fgets(#sName, MAX_PATH, sHANDL) )	break;
+			IF(DEBUG) printf("\nfgets:\t\"%s\"\n", #sName);
+			OemToChar(#sName, #Find.cFileName);
+			IF(!GetFileAttributesEx(#Find.cFileName, GetFileExInfoStandard, #FlInf)) {
+				printf("Erorr info \"%s\"\n", #sName);
+				ErrLev= ErrInfo;
+				goto NewRecord;
+			}
+			Find.nFileSizeLow= FlInf.nFileSizeLow;
+			printf("\nAfter GetFileAttr..:\t\"%s\"\n\n", #sName);
+		}
+		IF(Find.nFileSizeLow< 244000)	goto NextFile;
+		IF(!sett.filename) CharToOem(#Find.cFileName, #sName);
+
+		if( fHANDL= _lopen(#Find.cFileName, OF_READ) != EDI)
+		{
+			_lread(fHANDL, #Buff, MAXBYTEREAD);
+			SetSeek= 0;
+			EBX= #Buff+8+ DSDWORD[#Buff+ 3Ch];
+			switch(DSDWORD[EBX])
+			{
+				CASE SIG_V4:		SetSeek= SEEK_V4; break;
+				CASE SIG_V5_30D:
+						EAX= DSDWORD[#Buff+ SEEK_V5_30D8];
+						EAX&= 0FFFFFFh;
+						IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V5_30D8;
+						ELSE SetSeek= SEEK_V5_30DC;
+						break;
+				CASE SIG_V5_30C:
+						EAX= DSDWORD[#Buff+ SEEK_V5_30C9];
+						EAX&= 0FFFFFFh;
+						IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V5_30C9;
+						ELSE
+						{
+							EAX= DSDWORD[#Buff+ SEEK_V5_30CF];
+							EAX&= 0FFFFFFh;
+							IF( (EAX== 'SWC')||(EAX== 'SWF') ) SetSeek= SEEK_V5_30CF;
+							ELSE SetSeek= SEEK_V5_30C6;
+						}
+						break;
+				case SIG_V6_4:		SetSeek= SEEK_V6_4; BREAK;
+				case SIG_V6_21:
+						EAX= DSDWORD[#Buff+ SEEK_V6_21B7];
+						EAX&= 0FFFFFFh;
+						IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V6_21B7;
+						ELSE
+						{
+							EAX= DSDWORD[#Buff+ SEEK_V6_21BC];
+							EAX&= 0FFFFFFh;
+							IF( (EAX== 'SWC')||(EAX== 'SWF') ) SetSeek= SEEK_V6_21BC;
+							ELSE SetSeek= SEEK_V6_21C8;
+						}
+						BREAK;
+				case SIG_V7_14:		SetSeek= SEEK_V7_14; BREAK;
+				case SIG_V7_19:		SetSeek= SEEK_V7_19; BREAK;
+				case SIG_V8_22:		SetSeek= SEEK_V8_22; BREAK;
+			}
+			if(SetSeek)
+			{
+				pSeek= #Buff+ SetSeek;
+				EAX= DSDWORD[pSeek];
+				EAX&= 0FFFFFFh;
+				if( (EAX== 'SWC')||(EAX== 'SWF') )
+				{
+					EBX= #Find.cFileName-4+ strlen(#sName);
+					DSDWORD[EBX]= 'fws.';
+					CharToOem(#Find.cFileName, #swfName);
+					printf("Create..\t\"%s\"\n", #swfName);
+					IF( nHANDL= _lcreat(#Find.cFileName, 1)!= EDI)
+					{
+						CNT_Byte= Find.nFileSizeLow- SetSeek;
+						SetSeek= _lwrite(nHANDL, pSeek, CNT_Byte);
+						IF(SetSeek!= CNT_Byte) { ErrLev= ErrSeek; printf("Error write in \"%s\"\n", #swfName); }
+						ELSE printf("Write in\t\"%s\"\t\t%dB\n", #swfName, SetSeek);
+						_lclose(nHANDL);
+					}
+					ELSE { ErrLev= ErrCreate; printf("No create \"%s\"\n", #swfName); }
+					DSDWORD[pSeek]= 0;
+				}
+				ELSE { ErrLev= ErrSig; printf("Error swf-sig in \"%s\"\n", #sName); }
+			}
+			ELSE { ErrLev= ErrOffset; printf("Error offset in \"%s\"\n", #sName); }
+			_lclose(fHANDL);
+		}
+		ELSE { ErrLev= ErrOpen; printf("Error open \"%s\"\n", #Find.cFileName); }
+	NextFile:
+		IF( (!sett.filename)&&(!FindNextFile(sHANDL, #Find)) ) BREAK;
+	}
+	IF(sett.filename) fclose(sHANDL);
+	ELSE FindClose(sHANDL);
+
 	printf("Finish\n\n");
-	IF (!quiet)	_getch();
+ExitMain:
+	IF(!sett.quiet)	_getch();
+	return ErrLev;
 }
