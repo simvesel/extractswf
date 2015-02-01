@@ -1,5 +1,5 @@
-/*
-	Copyright © 2006 — 2008, 2011, 2013, 2015 Svyatoslav Skriplyonok. All rights reserved.
+п»ї/*
+	Copyright В© 2006 вЂ” 2008, 2011, 2013, 2015 Svyatoslav Skriplyonok. All rights reserved.
 	Licensed under the GNU AFFERO GENERAL PUBLIC LICENSE, Version 3
 	License: https://github.com/simvesel/extractswf/blob/master/LICENSE
 */
@@ -17,16 +17,16 @@
 #include <windows.h>
 #include "msvcrt.h"
 
-//Сделать так, чтобы на создаваемых файлах не устанавливался флаг "r"
-//Добавить массив (сигнатура, смещение)
-//массив номер версии в двоичном формате (старший, младший номера)
+//РЎРґРµР»Р°С‚СЊ С‚Р°Рє, С‡С‚РѕР±С‹ РЅР° СЃРѕР·РґР°РІР°РµРјС‹С… С„Р°Р№Р»Р°С… РЅРµ СѓСЃС‚Р°РЅР°РІР»РёРІР°Р»СЃСЏ С„Р»Р°Рі "r"
+//Р”РѕР±Р°РІРёС‚СЊ РјР°СЃСЃРёРІ (СЃРёРіРЅР°С‚СѓСЂР°, СЃРјРµС‰РµРЅРёРµ)
+//РјР°СЃСЃРёРІ РЅРѕРјРµСЂ РІРµСЂСЃРёРё РІ РґРІРѕРёС‡РЅРѕРј С„РѕСЂРјР°С‚Рµ (СЃС‚Р°СЂС€РёР№, РјР»Р°РґС€РёР№ РЅРѕРјРµСЂР°)
 
-//Добавить функцию по занесению в спецпапку(рандомом имя генерируется) ошибочных файлов (обработать повторные имена: как-то изменить)
+//Р”РѕР±Р°РІРёС‚СЊ С„СѓРЅРєС†РёСЋ РїРѕ Р·Р°РЅРµСЃРµРЅРёСЋ РІ СЃРїРµС†РїР°РїРєСѓ(СЂР°РЅРґРѕРјРѕРј РёРјСЏ РіРµРЅРµСЂРёСЂСѓРµС‚СЃСЏ) РѕС€РёР±РѕС‡РЅС‹С… С„Р°Р№Р»РѕРІ (РѕР±СЂР°Р±РѕС‚Р°С‚СЊ РїРѕРІС‚РѕСЂРЅС‹Рµ РёРјРµРЅР°: РєР°Рє-С‚Рѕ РёР·РјРµРЅРёС‚СЊ)
 
-//Дельфины.exe SIG_V4_7	37582406h
+//Р”РµР»СЊС„РёРЅС‹.exe SIG_V4_7	37582406h
 //SEEK_V4_7	46000h
 
-//Рыбка в аквариуме.exe SIG_V3_8	353D0FDDh
+//Р С‹Р±РєР° РІ Р°РєРІР°СЂРёСѓРјРµ.exe SIG_V3_8	353D0FDDh
 //SEEK_V3_8	24000h
 
 //	!!!!!!!!!!!!!
@@ -67,7 +67,7 @@
 #define	SIGN_V8_22	4310D1EEh
 #define	SEEK_V8_22	182000h
 
-//кол-во МБайт читаем
+//РєРѕР»-РІРѕ РњР‘Р°Р№С‚ С‡РёС‚Р°РµРј
 #define	MAXBYTEREAD	96 *1048576
 
 
@@ -106,11 +106,11 @@ int main()
 //  Buff[MAXBYTEREAD/4] = 0DEADDEADh;
 //  Buff[MAXBYTEREAD-16] = 0DEADDEADh;
 
-  puts( "Copyright © 2006 — 2008, 2011, 2013, 2015 SimVesel(Simron)\n"
+  puts( "Copyright В© 2006 вЂ” 2008, 2011, 2013, 2015 SimVesel(Simron)\n"
     "EXE --> SWF Extractor 1v4.8" );
 
-  sett.pause = 1; //1 - при выходе ждёт нажатия любой клавиши
-  sett.batch = 1; //1 - сама прога ищет в текущем каталоге все файлы *.exe и обрабатывает их
+  sett.pause = 1; //1 - РїСЂРё РІС‹С…РѕРґРµ Р¶РґС‘С‚ РЅР°Р¶Р°С‚РёСЏ Р»СЋР±РѕР№ РєР»Р°РІРёС€Рё
+  sett.batch = 1; //1 - СЃР°РјР° РїСЂРѕРіР° РёС‰РµС‚ РІ С‚РµРєСѓС‰РµРј РєР°С‚Р°Р»РѕРіРµ РІСЃРµ С„Р°Р№Р»С‹ *.exe Рё РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РёС…
   ErrLev= 0;
 
   FOR( k = 0; k++< __numparam; )
@@ -222,7 +222,7 @@ int main()
         case SIGN_V8_22:    SetSeek= SEEK_V8_22; BREAK;
       }
 
-      k = strlen(#Find.cFileName) - 4; //смещение от первого символа полного имени файла до точки в расширении
+      k = strlen(#Find.cFileName) - 4; //СЃРјРµС‰РµРЅРёРµ РѕС‚ РїРµСЂРІРѕРіРѕ СЃРёРјРІРѕР»Р° РїРѕР»РЅРѕРіРѕ РёРјРµРЅРё С„Р°Р№Р»Р° РґРѕ С‚РѕС‡РєРё РІ СЂР°СЃС€РёСЂРµРЅРёРё
       if(SetSeek)
       {
         pSeek = #Buff+ SetSeek;
@@ -234,7 +234,7 @@ int main()
           DSDWORD[EBX]= 'fws.';
           CharToOem(#Find.cFileName, #OEM_newName);
           printf("Create..\t\"%s\"\n", #OEM_newName);
-          ErrLev = 0; //сбрасываем историю ошибок
+          ErrLev = 0; //СЃР±СЂР°СЃС‹РІР°РµРј РёСЃС‚РѕСЂРёСЋ РѕС€РёР±РѕРє
           IF( nHANDL= _lcreat(#Find.cFileName, 1)!= EDI)
           {
             CNT_Byte= Find.nFileSizeLow- SetSeek;
@@ -253,13 +253,13 @@ int main()
     CloseEXEfile:
       _lclose(fHANDL);
 
-// Если не была найдена сигнатура, то изменяем "exe" в "err"
+// Р•СЃР»Рё РЅРµ Р±С‹Р»Р° РЅР°Р№РґРµРЅР° СЃРёРіРЅР°С‚СѓСЂР°, С‚Рѕ РёР·РјРµРЅСЏРµРј "exe" РІ "err"
       if ( ErrLev == ErrSig )
       {
         printf("Error SWF-SIGN: \t\"%s\"\n", #OEM_Name);
-        strncpy(#Buff, #Find.cFileName, EX_PATH); //копируем имя из Find.cFileName в Buff
-        EBX= #Buff + 1 + k; //на первый символ расширения
-        DSDWORD[EBX]= '\0rre';  //расширение ".err"
+        strncpy(#Buff, #Find.cFileName, EX_PATH); //РєРѕРїРёСЂСѓРµРј РёРјСЏ РёР· Find.cFileName РІ Buff
+        EBX= #Buff + 1 + k; //РЅР° РїРµСЂРІС‹Р№ СЃРёРјРІРѕР» СЂР°СЃС€РёСЂРµРЅРёСЏ
+        DSDWORD[EBX]= '\0rre';  //СЂР°СЃС€РёСЂРµРЅРёРµ ".err"
 
         IF ( (MoveFileEx(#Find.cFileName, #Buff, MOVEFILE_COPY_ALLOWED) != 0) && (CharToOem(#Buff, #Buff) != 0) )
         {
