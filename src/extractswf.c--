@@ -1,7 +1,11 @@
+#define __clearpost
+#pragma option CPA
+
 #pragma option w32c
 #pragma option P
 #pragma option J1
 #pragma option X
+
 #include <windows.h>
 #include "msvcrt.h"
 
@@ -11,14 +15,14 @@
 
 //Добавить функцию по занесению в спецпапку(рандомом имя генерируется) ошибочных файлов (обработать повторные имена: как-то изменить)
 
-// Переделать алгоритм под чтение файла конфига сигнатуры-смещения, в цикле пробегаться по заполненному массиву и сверяться с текущим файлом в памяти и на выходе результат
-
-//	!!!!!!!!!!!!!
 //Дельфины.exe SIG_V4_7	37582406h
 //SEEK_V4_7	46000h
 
 //Рыбка в аквариуме.exe SIG_V3_8	353D0FDDh
 //SEEK_V3_8	24000h
+
+//	!!!!!!!!!!!!!
+
 
 #define	SIG_V3_8	353D0FDDh
 #define	SEEK_V3_8	24000h
@@ -56,13 +60,22 @@
 #define	SEEK_V8_22	182000h
 
 //кол-во МБайт читаем
-#define	MAXBYTEREAD	30 *1048576
+#define	MAXBYTEREAD	96 *1048576
 
-#define DEBUG 0
+
+//#define DBG
+#undef DBG
+
+#ifdef DBG
+  #define DEBUG 1
+#else
+  #define DEBUG 0
+#endif
+
 
 enum { ErrName= 1, ErrParam, ErrInfo, ErrOpen, ErrRead, ErrSeek, ErrSig, ErrCreate, ErrRename };
 
-dword	fHANDL, nHANDL, sHANDL, SetSeek, pSeek, CNT_Byte, ErrLev, k;
+dword fHANDL, nHANDL, sHANDL, SetSeek, pSeek, CNT_Byte, ErrLev, k;
 char *pPrm;
 
 struct sett_extract {
@@ -81,27 +94,41 @@ byte Buff[MAXBYTEREAD];
 
 int main()
 {
-  printf("EXE--> SWF Extractor 1v4.6\nHistory: 04.10.2006 30.05.07 13.01.08 04.05.08 14.09.08 16.09.08 20.09.08\n29.10.08 03.11.2008 2008-12-02 2011-10-02 11-10-03 11-11-07\n\t\t(c) Simron\n");
+//  Buff[MAXBYTEREAD/2] = 0DEADDEADh;
+//  Buff[MAXBYTEREAD/4] = 0DEADDEADh;
+//  Buff[MAXBYTEREAD-16] = 0DEADDEADh;
+
+  puts("EXE--> SWF Extractor 1v4.7\nHistory: 04.10.06 30.05.07 13.01.08 "
+     "04.05.08 14.09.08 16.09.08 20.09.08\n29.10.08 03.11.08 2008-12-02 "
+     "2011-10-02 11-10-03 13-05-10\n\t\t(c) Simron");
   sett.quiet= 0; //0 - при выходе ждёт нажатия любой клавиши
   sett.batch= 1; //1 - сама прога ищет в текущем каталоге все файлы *.exe и обрабатывает их
   ErrLev= 0;
 
-  FOR(k= 0; k++< __numparam;)
+  FOR( k = 0; k++< __numparam; )
   {
-    pPrm= @PARAMSTR(k);
-    IF(!strcmp(pPrm, "-q")) { sett.quiet= 1; CONTINUE; }
-    IF(!strcmp(pPrm, "-m")) { sett.batch= 0; CONTINUE; }
-    printf("\nUnknown cmd \"%s\"", pPrm);
-    ErrLev= ErrParam;
-	}
+    pPrm = @PARAMSTR(k);
+    IF( !strcmp(pPrm, "-q") )
+    {
+      sett.quiet= 1;
+      CONTINUE;
+    }
+    IF( !strcmp(pPrm, "-m") )
+    {
+      sett.batch= 0;
+      CONTINUE;
+    }
+    printf( "\nUnknown cmd \"%s\"", pPrm );
+    ErrLev = ErrParam;
+  }
   IF(DEBUG) printf("\n\nquiet: %d\nbatch: %d\n", sett.quiet, sett.batch);
   IF(ErrLev) GOTO localExit;
 
-  EDI= -1;
+  EDI = -1;
   IF(sett.batch) {
     IF( sHANDL= FindFirstFile("*.exe", #Find)== EDI )
     {
-      printf("\nNo files found\n");
+      puts("\nNo files found");
     localExit:
       goto ExitMain;
     }
@@ -109,8 +136,13 @@ int main()
 
   FOR(;;)
   {
-    printf("\n");
+    puts("");
+
+#ifdef DBG
     if(!sett.batch) {
+#else
+    IF(!sett.batch) {
+#endif
     NewRecord:
       IF(!gets(#OEM_Name))  break;
       DSBYTE[#OEM_Name- 1+ EX_PATH]= 0;
@@ -183,7 +215,7 @@ int main()
       if(SetSeek)
       {
         pSeek= #Buff+ SetSeek;
-        EAX= DSDWORD[pSeek];
+        EAX = DSDWORD[pSeek];
         EAX&= 0FFFFFFh;
         if( (EAX== 'SWC')||(EAX== 'SWF') )
         {
@@ -233,7 +265,7 @@ int main()
   }
   IF(sett.batch) FindClose(sHANDL);
 
-  printf("\nFinish\n");
+  puts("\nFinish");
 ExitMain:
   IF(!sett.quiet)  _getch();
   return ErrLev;
