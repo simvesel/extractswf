@@ -20,41 +20,47 @@
 //	!!!!!!!!!!!!!
 
 
-#define	SIG_V4		6010Bh
+#define	SIG_V3_8	353D0FDDh
+#define	SEEK_V3_8	24000h
+
+#define	SIG_V4_7	37582406h
+#define	SEEK_V4_7	46000h
+
+#define	SIGN_V4		6010Bh
 #define	SEEK_V4		46000h
 
-#define	SIG_V5_30D	399C98BDh
+#define	SIGN_V5_30D	399C98BDh
 #define	SEEK_V5_30D8	58000h
 #define	SEEK_V5_30DC	5C000h
 
-#define	SIG_V5_30C	399C998Ch
+#define	SIGN_V5_30C	399C998Ch
 #define	SEEK_V5_30C9	59000h
 #define	SEEK_V5_30CF	5F000h
 #define	SEEK_V5_30C6	69000h
 
-#define	SIG_V6_4	3C74E454h
+#define	SIGN_V6_4	3C74E454h
 #define	SEEK_V6_4	0C6000h
 
-#define	SIG_V6_21	3C85AAA3h
+#define	SIGN_V6_21	3C85AAA3h
 #define	SEEK_V6_21B7	0B7000h
 #define	SEEK_V6_21BC	0BC000h
 #define	SEEK_V6_21C8	0C8000h
 
-#define	SIG_V7_14	3F57AD38h
+#define	SIGN_V7_14	3F57AD38h
 #define	SEEK_V7_14	0F1000h
 
-#define	SIG_V7_19	3FD4F616h
+#define	SIGN_V7_19	3FD4F616h
 #define	SEEK_V7_19	0F5000h
 
-#define	SIG_V8_22	4310D1EEh
+#define	SIGN_V8_22	4310D1EEh
 #define	SEEK_V8_22	182000h
 
 //кол-во МБайт читаем
-#define	MAXBYTEREAD	18*1048576
+#define	MAXBYTEREAD	25 *1048576
 
 #define DEBUG 0
 
-enum { ErrName= 1, ErrParam, ErrOpen, ErrInfo, ErrOffset, ErrSeek, ErrSig, ErrCreate };
+enum { ErrName= 1, ErrParam, ErrInfo, ErrOpen, ErrRead, ErrSeek, ErrSig, ErrCreate, ErrRename };
 
 dword	fHANDL, nHANDL, sHANDL, SetSeek, pSeek, CNT_Byte, ErrLev, k;
 char *pPrm;
@@ -68,33 +74,33 @@ sett_extract sett;
 
 #define EX_PATH MAX_PATH*16
 
-byte sName[EX_PATH],  swfName[EX_PATH];
+byte OEM_Name[EX_PATH],  OEM_newName[EX_PATH];
 WIN32_FILE_ATTRIBUTE_DATA FlInf;
 WIN32_FIND_DATA Find;
 byte Buff[MAXBYTEREAD];
 
 int main()
 {
-	printf("EXE--> SWF Extractor 1v4.1\nHistory: 04.10.06 30.05.07 13.01.08 04.05.08 14.09.08 16.09.08 20.09.08\n29.10.08 03.11.08 02.12.08\n\t\t(c) Simron\n\n");
-	sett.quiet= 0;
-	sett.batch= 1;
+	printf("EXE--> SWF Extractor 1v4.5\nHistory: 04.10.06 30.05.07 13.01.08 04.05.08 14.09.08 16.09.08 20.09.08\n29.10.08 03.11.08 2008-12-02 2011-10-02 11-10-03\n\t\t(c) Simron\n");
+	sett.quiet= 0; //0 - при выходе ждёт нажатия любой клавиши
+	sett.batch= 1; //1 - сама прога ищет в текущем каталоге все файлы *.exe и обрабатывает их
 	ErrLev= 0;
 
  	FOR(k= 0; k++< __numparam;){
 		pPrm= @PARAMSTR(k);
  		IF(!strcmp(pPrm, "-q")) { sett.quiet= 1; CONTINUE; }
 		IF(!strcmp(pPrm, "-m")) { sett.batch= 0; CONTINUE; }
-		printf("Unknown cmd \"%s\"\n", pPrm);
+		printf("\nUnknown cmd \"%s\"", pPrm);
 		ErrLev= ErrParam;
  	}
- 	IF(DEBUG) printf("quiet: %d\nbatch: %d\n", sett.quiet, sett.batch);
+ 	IF(DEBUG) printf("\n\nquiet: %d\nbatch: %d\n", sett.quiet, sett.batch);
  	IF(ErrLev) GOTO localExit;
 
 	EDI= -1;
 	IF(sett.batch) {
 		IF( sHANDL= FindFirstFile("*.exe", #Find)== EDI )
 		{
-			printf("No files found\n");
+			printf("\nNo files found\n");
 		localExit:
 			goto ExitMain;
 		}
@@ -102,38 +108,47 @@ int main()
 
 	FOR(;;)
 	{
-		IF(!sett.batch) {
+		printf("\n");
+		if(!sett.batch) {
 		NewRecord:
-			IF(!gets(#sName))	break;
-			DSBYTE[#sName- 1+ EX_PATH]= 0;
-			IF(DEBUG) printf("\ngets:\t\"%s\"\n", #sName);
-			OemToChar(#sName, #Find.cFileName);
+			IF(!gets(#OEM_Name))	break;
+			DSBYTE[#OEM_Name- 1+ EX_PATH]= 0;
+			IF(DEBUG) printf("\ngets:\t\"%s\"", #OEM_Name);
+			OemToChar(#OEM_Name, #Find.cFileName);
 			IF(!GetFileAttributesEx(#Find.cFileName, GetFileExInfoStandard, #FlInf)) {
-				printf("Erorr info \"%s\"\n", #sName);
+				printf("\nErorr info \"%s\"", #OEM_Name);
 				ErrLev= ErrInfo;
 				GOTO NewRecord;
 			}
 			Find.nFileSizeLow= FlInf.nFileSizeLow;
-			IF(DEBUG) printf("\nAfter GetFileAttr..:\t\"%s\"\n\n", #sName);
+			IF(DEBUG) printf("\nAfter GetFileAttr..:\t\"%s\"", #OEM_Name);
 		}
 		IF(Find.nFileSizeLow< 244000)	goto NextFile;
-		IF(sett.batch) CharToOem(#Find.cFileName, #sName);
+		IF(sett.batch) CharToOem(#Find.cFileName, #OEM_Name);
 
 		if( fHANDL= _lopen(#Find.cFileName, OF_READ) != EDI)
 		{
-			_lread(fHANDL, #Buff, MAXBYTEREAD);
+			IF ( CNT_Byte = _lread(fHANDL, #Buff, MAXBYTEREAD) < 244000 )
+			{
+				ErrLev = ErrRead;
+				printf("\nError read \"%s\"", #OEM_Name);
+				goto CloseEXEfile;
+			}
+			IF(DEBUG) printf("\nRead from \"%s\":\t\t%dB", #OEM_Name, CNT_Byte);
 			SetSeek= 0;
 			EBX= #Buff+8+ DSDWORD[#Buff+ 3Ch];
 			switch(DSDWORD[EBX])
 			{
-				CASE SIG_V4:		SetSeek= SEEK_V4; break;
-				CASE SIG_V5_30D:
+				CASE SIG_V3_8:	SetSeek = SEEK_V3_8; break;
+				CASE SIG_V4_7:	SetSeek = SEEK_V4_7; break;
+				CASE SIGN_V4:		SetSeek= SEEK_V4; break;
+				CASE SIGN_V5_30D:
 						EAX= DSDWORD[#Buff+ SEEK_V5_30D8];
 						EAX&= 0FFFFFFh;
 						IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V5_30D8;
 						ELSE SetSeek= SEEK_V5_30DC;
 						break;
-				CASE SIG_V5_30C:
+				case SIGN_V5_30C:
 						EAX= DSDWORD[#Buff+ SEEK_V5_30C9];
 						EAX&= 0FFFFFFh;
 						IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V5_30C9;
@@ -145,8 +160,8 @@ int main()
 							ELSE SetSeek= SEEK_V5_30C6;
 						}
 						break;
-				case SIG_V6_4:		SetSeek= SEEK_V6_4; BREAK;
-				case SIG_V6_21:
+				case SIGN_V6_4:		SetSeek= SEEK_V6_4; BREAK;
+				case SIGN_V6_21:
 						EAX= DSDWORD[#Buff+ SEEK_V6_21B7];
 						EAX&= 0FFFFFFh;
 						IF( (EAX== 'SWC')||(EAX== 'SWF') )	SetSeek= SEEK_V6_21B7;
@@ -158,10 +173,12 @@ int main()
 							ELSE SetSeek= SEEK_V6_21C8;
 						}
 						BREAK;
-				case SIG_V7_14:		SetSeek= SEEK_V7_14; BREAK;
-				case SIG_V7_19:		SetSeek= SEEK_V7_19; BREAK;
-				case SIG_V8_22:		SetSeek= SEEK_V8_22; BREAK;
+				case SIGN_V7_14:		SetSeek= SEEK_V7_14; BREAK;
+				case SIGN_V7_19:		SetSeek= SEEK_V7_19; BREAK;
+				case SIGN_V8_22:		SetSeek= SEEK_V8_22; BREAK;
 			}
+
+			k = strlen(#Find.cFileName) - 4; //смещение от первого символа полного имени файла до точки в расширении
 			if(SetSeek)
 			{
 				pSeek= #Buff+ SetSeek;
@@ -169,33 +186,53 @@ int main()
 				EAX&= 0FFFFFFh;
 				if( (EAX== 'SWC')||(EAX== 'SWF') )
 				{
-					EBX= #Find.cFileName-4+ strlen(#sName);
+					EBX= #Find.cFileName + k;
 					DSDWORD[EBX]= 'fws.';
-					CharToOem(#Find.cFileName, #swfName);
-					printf("Create..\t\"%s\"\n", #swfName);
+					CharToOem(#Find.cFileName, #OEM_newName);
+					printf("\nCreate..\t\"%s\"\n", #OEM_newName);
+					ErrLev = 0; //сбрасываем историю ошибок
 					IF( nHANDL= _lcreat(#Find.cFileName, 1)!= EDI)
 					{
 						CNT_Byte= Find.nFileSizeLow- SetSeek;
 						SetSeek= _lwrite(nHANDL, pSeek, CNT_Byte);
-						IF(SetSeek!= CNT_Byte) { ErrLev= ErrSeek; printf("Error write in \"%s\"\n", #swfName); }
-						ELSE printf("Write in\t\"%s\"\t\t%dB\n", #swfName, SetSeek);
+						IF(SetSeek!= CNT_Byte) { ErrLev= ErrSeek; printf("Error write in \"%s\"\n", #OEM_newName); }
+						ELSE printf("Write in\t\"%s\"\t\t%dB\n", #OEM_newName, SetSeek);
 						_lclose(nHANDL);
 					}
-					ELSE { ErrLev= ErrCreate; printf("No create \"%s\"\n", #swfName); }
+					ELSE { ErrLev= ErrCreate; printf("Error create \"%s\"\n", #OEM_newName); }
 					DSDWORD[pSeek]= 0;
 				}
-				ELSE { ErrLev= ErrSig; printf("Error swf-sig in \"%s\"\n", #sName); }
+				ELSE ErrLev = ErrSig;
 			}
-			ELSE { ErrLev= ErrOffset; printf("Error offset in \"%s\"\n", #sName); }
+			ELSE ErrLev = ErrSig;
+
+		CloseEXEfile:
 			_lclose(fHANDL);
+// Если не была найдена сигнатура, то изменяем "exe" в "err"
+			if ( ErrLev == ErrSig )
+			{
+				printf("Error SWF-SIGN: \t\"%s\"\n", #OEM_Name);
+				strncpy(#Buff, #Find.cFileName, EX_PATH); //копируем имя из Find.cFileName в Buff
+				EBX= #Buff + 1 + k; //на первый символ расширения
+				DSDWORD[EBX]= '\0rre';	//расширение ".err"
+				IF ( (MoveFileEx(#Find.cFileName, #Buff, MOVEFILE_COPY_ALLOWED) != 0) && (CharToOem(#Buff, #Buff) != 0) )
+				{
+					CharToOem(#Find.cFileName, #Find.cFileName);
+					printf("Rename \"%s\" to \"%s\"\n", #Find.cFileName, #Buff);
+				}
+				ELSE {
+					ErrLev= ErrRename;
+					printf("Error rename to \"%s\"\n", #Buff);
+				}
+			}
 		}
-		ELSE { ErrLev= ErrOpen; printf("Error open \"%s\"\n", #Find.cFileName); }
+		ELSE { ErrLev= ErrOpen; printf("\nError open \"%s\"", #OEM_Name); }
 	NextFile:
-		IF( (sett.batch)&&(!FindNextFile(sHANDL, #Find)) ) BREAK;
+		IF( (sett.batch)&&( !FindNextFile(sHANDL, #Find) ) ) BREAK;
 	}
 	IF(sett.batch) FindClose(sHANDL);
 
-	printf("Finish\n\n");
+	printf("\nFinish\n");
 ExitMain:
 	IF(!sett.quiet)	_getch();
 	return ErrLev;
