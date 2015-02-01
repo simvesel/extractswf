@@ -87,7 +87,7 @@ dword fHANDL, nHANDL, sHANDL, SetSeek, pSeek, CNT_Byte, ErrLev, k;
 char *pPrm;
 
 struct sett_extract {
-  char quiet;
+  char pause;
   char batch;
 };
 
@@ -106,12 +106,11 @@ int main()
 //  Buff[MAXBYTEREAD/4] = 0DEADDEADh;
 //  Buff[MAXBYTEREAD-16] = 0DEADDEADh;
 
-  puts("EXE--> SWF Extractor 1v4.7\nHistory: 04.10.06 30.05.07 13.01.08 "
-     "04.05.08 14.09.08 16.09.08 20.09.08\n29.10.08 03.11.08 2008-12-02 "
-     "2011-10-02 11-10-03 13-05-10\n\t\t(c) SimVesel(Simron)");
+  puts( "Copyright © 2006 Ч 2008, 2011, 2013, 2015 SimVesel(Simron)\n"
+    "EXE --> SWF Extractor 1v4.8" );
 
-  sett.quiet= 0; //0 - при выходе ждЄт нажати€ любой клавиши
-  sett.batch= 1; //1 - сама прога ищет в текущем каталоге все файлы *.exe и обрабатывает их
+  sett.pause = 1; //1 - при выходе ждЄт нажати€ любой клавиши
+  sett.batch = 1; //1 - сама прога ищет в текущем каталоге все файлы *.exe и обрабатывает их
   ErrLev= 0;
 
   FOR( k = 0; k++< __numparam; )
@@ -119,19 +118,19 @@ int main()
     pPrm = @PARAMSTR(k);
     IF( !strcmp(pPrm, "-q") )
     {
-      sett.quiet= 1;
+      sett.pause = 0;
       CONTINUE;
     }
     IF( !strcmp(pPrm, "-m") )
     {
-      sett.batch= 0;
+      sett.batch = 0;
       CONTINUE;
     }
 
     printf( "\nUnknown cmd \"%s\"", pPrm );
     ErrLev = ErrParam;
   }
-  IF(DEBUG) printf("\n\nquiet: %d\nbatch: %d\n", sett.quiet, sett.batch);
+  IF(DEBUG) printf("\n\pause: %d\nbatch: %d\n", sett.pause, sett.batch);
 
   IF(ErrLev) GOTO localExit;
 
@@ -278,7 +277,8 @@ int main()
   IF(sett.batch) FindClose(sHANDL);
 
   puts("\nFinish");
+
 ExitMain:
-  IF(!sett.quiet)  _getch();
+  IF( sett.pause )  _getch();
   return ErrLev;
 }
