@@ -127,10 +127,10 @@ int main()
       CONTINUE;
     }
 
-    printf( "\nUnknown cmd \"%s\"", pPrm );
+    printf( "Unknown cmd \"%s\"\n", pPrm );
     ErrLev = ErrParam;
   }
-  IF(DEBUG) printf("\n\pause: %d\nbatch: %d\n", sett.pause, sett.batch);
+  IF(DEBUG) printf("\npause: %d\nbatch: %d\n", sett.pause, sett.batch);
 
   IF(ErrLev) GOTO localExit;
 
@@ -139,7 +139,7 @@ int main()
   {
     IF( sHANDL= FindFirstFile("*.exe", #Find)== EDI )
     {
-      puts("\nNo files found");
+      puts("No files found\n");
     localExit:
       goto ExitMain;
     }
@@ -157,15 +157,15 @@ int main()
     NewRecord:
       IF(!gets(#OEM_Name))  break;
       DSBYTE[#OEM_Name- 1+ EX_PATH]= 0;
-      IF(DEBUG) printf("\ngets:\t\"%s\"", #OEM_Name);
+      IF(DEBUG) printf("gets:\t\"%s\"\n", #OEM_Name);
       OemToChar(#OEM_Name, #Find.cFileName);
       IF(!GetFileAttributesEx(#Find.cFileName, GetFileExInfoStandard, #FlInf)) {
-        printf("\nErorr info \"%s\"", #OEM_Name);
+        printf("Erorr info \"%s\"\n", #OEM_Name);
         ErrLev= ErrInfo;
         GOTO NewRecord;
       }
       Find.nFileSizeLow= FlInf.nFileSizeLow;
-      IF(DEBUG) printf("\nAfter GetFileAttr..:\t\"%s\"", #OEM_Name);
+      IF(DEBUG) printf("After GetFileAttr..:\t\"%s\"\n", #OEM_Name);
     }
     IF(Find.nFileSizeLow< 244000)  goto NextFile;
     IF(sett.batch) CharToOem(#Find.cFileName, #OEM_Name);
@@ -175,10 +175,10 @@ int main()
       IF ( CNT_Byte = _lread(fHANDL, #Buff, MAXBYTEREAD) < 244000 )
       {
         ErrLev = ErrRead;
-        printf("\nError read \"%s\"", #OEM_Name);
+        printf("Error read \"%s\"\n", #OEM_Name);
         goto CloseEXEfile;
       }
-      IF(DEBUG) printf("\nRead from \"%s\":\t\t%dB", #OEM_Name, CNT_Byte);
+      IF(DEBUG) printf("Read from \"%s\":\t\t%dB\n", #OEM_Name, CNT_Byte);
       SetSeek= 0;
       EBX= #Buff+8+ DSDWORD[#Buff+ 3Ch];
       switch(DSDWORD[EBX])
@@ -225,15 +225,15 @@ int main()
       k = strlen(#Find.cFileName) - 4; //смещение от первого символа полного имени файла до точки в расширении
       if(SetSeek)
       {
-        pSeek= #Buff+ SetSeek;
+        pSeek = #Buff+ SetSeek;
         EAX = DSDWORD[pSeek];
-        EAX&= 0FFFFFFh;
-        if( (EAX== 'SWC')||(EAX== 'SWF') )
+        EAX &= 0FFFFFFh;
+        if( (EAX == 'SWC')||(EAX == 'SWF') )
         {
           EBX= #Find.cFileName + k;
           DSDWORD[EBX]= 'fws.';
           CharToOem(#Find.cFileName, #OEM_newName);
-          printf("\nCreate..\t\"%s\"\n", #OEM_newName);
+          printf("Create..\t\"%s\"\n", #OEM_newName);
           ErrLev = 0; //сбрасываем историю ошибок
           IF( nHANDL= _lcreat(#Find.cFileName, 1)!= EDI)
           {
@@ -252,6 +252,7 @@ int main()
 
     CloseEXEfile:
       _lclose(fHANDL);
+
 // Если не была найдена сигнатура, то изменяем "exe" в "err"
       if ( ErrLev == ErrSig )
       {
@@ -259,6 +260,7 @@ int main()
         strncpy(#Buff, #Find.cFileName, EX_PATH); //копируем имя из Find.cFileName в Buff
         EBX= #Buff + 1 + k; //на первый символ расширения
         DSDWORD[EBX]= '\0rre';  //расширение ".err"
+
         IF ( (MoveFileEx(#Find.cFileName, #Buff, MOVEFILE_COPY_ALLOWED) != 0) && (CharToOem(#Buff, #Buff) != 0) )
         {
           CharToOem(#Find.cFileName, #Find.cFileName);
@@ -270,13 +272,16 @@ int main()
         }
       }
     }
-    ELSE { ErrLev= ErrOpen; printf("\nError open \"%s\"", #OEM_Name); }
-  NextFile:
-    IF( (sett.batch)&&( !FindNextFile(sHANDL, #Find) ) ) BREAK;
-  }
-  IF(sett.batch) FindClose(sHANDL);
+    ELSE { ErrLev= ErrOpen; printf("Error open \"%s\"\n", #OEM_Name); }
 
-  puts("\nFinish");
+  NextFile:
+    IF( (sett.batch) && ( !FindNextFile(sHANDL, #Find) ) )
+      BREAK;
+  }
+  IF(sett.batch)
+    FindClose(sHANDL);
+
+  puts( "\nFinish" );
 
 ExitMain:
   IF( sett.pause )  _getch();
