@@ -1,5 +1,5 @@
-# extractswf
-Extract embedded swf file from the executable file player with swf file.
+# swf-extractor
+Console utility to extract embedded swf file from executable swf-player with swf file.
 
 ### USING
 **SPHINX C-- Compiler   Version 0.239c b26   Apr 27 2007**
